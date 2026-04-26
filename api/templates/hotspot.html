@@ -263,8 +263,12 @@
 </div>
 
 <div class="phase-tabs">
-  <div class="phase-tab active" id="tab-mc" onclick="switchPhase('mc')">📋 Multiple Choice (15)</div>
-  <div class="phase-tab" id="tab-sa" onclick="switchPhase('sa')">✍️ Short Answer (5)</div>
+  <div class="phase-tab active" id="tab-all" onclick="switchCategory('all')">All (20)</div>
+  <div class="phase-tab" id="tab-Safety" onclick="switchCategory('Safety')">⚡ Safety (4)</div>
+  <div class="phase-tab" id="tab-Teamwork" onclick="switchCategory('Teamwork')">🤝 Teamwork (4)</div>
+  <div class="phase-tab" id="tab-Compliance" onclick="switchCategory('Compliance')">📋 Compliance (4)</div>
+  <div class="phase-tab" id="tab-Ethics" onclick="switchCategory('Ethics')">⚖ Ethics (4)</div>
+  <div class="phase-tab" id="tab-Technical" onclick="switchCategory('Technical')">🔧 Technical (4)</div>
 </div>
 
 <div class="hotspot-layout">
@@ -472,22 +476,42 @@ const SA_SCENARIOS = [
    question:'How do you handle this situation? What factors do you weigh, who do you contact, and what do you ultimately decide?'},
 ];
 
-let currentPhase = 'mc';
-let currentMcIdx = 0;
-let currentSaIdx = 0;
+let currentCategory = 'all';
+let currentItemIdx = 0;
 let mcAnswers = {};
 let saAnswers = {};
 
-function switchPhase(phase) {
-  currentPhase = phase;
-  document.getElementById('tab-mc').classList.toggle('active', phase === 'mc');
-  document.getElementById('tab-sa').classList.toggle('active', phase === 'sa');
+// Build filtered question list based on category
+function getFilteredQuestions(cat) {
+  if (cat === 'all') {
+    // Interleave: all MC then all SA
+    return [...MC_SCENARIOS, ...SA_SCENARIOS];
+  }
+  // For a specific category: its 3 MC + 1 SA
+  const mc = MC_SCENARIOS.filter(s => s.category === cat);
+  const sa = SA_SCENARIOS.filter(s => s.category === cat);
+  return [...mc, ...sa];
+}
+
+let filteredQuestions = getFilteredQuestions('all');
+
+function switchCategory(cat) {
+  currentCategory = cat;
+  currentItemIdx = 0;
+  filteredQuestions = getFilteredQuestions(cat);
+  // Update tab active states
+  ['all','Safety','Teamwork','Compliance','Ethics','Technical'].forEach(c => {
+    const el = document.getElementById('tab-' + c);
+    if (el) el.classList.toggle('active', c === cat);
+  });
   renderScenario();
 }
 
 function renderScenario() {
-  if (currentPhase === 'mc') renderMC(MC_SCENARIOS[currentMcIdx]);
-  else renderSA(SA_SCENARIOS[currentSaIdx]);
+  const item = filteredQuestions[currentItemIdx];
+  if (!item) return;
+  if (item.type === 'mc') renderMC(item);
+  else renderSA(item);
   updateProgress(); renderDots(); updateCategoryBreakdown();
 }
 
@@ -531,10 +555,10 @@ function renderMC(s) {
   } else { fb.style.display = 'none'; }
 
   const answered = existing !== undefined;
-  const isLast = currentMcIdx === MC_SCENARIOS.length - 1;
-  document.getElementById('prevBtn').style.display = currentMcIdx > 0 ? 'flex' : 'none';
+  const isLast = currentItemIdx === filteredQuestions.length - 1;
+  document.getElementById('prevBtn').style.display = currentItemIdx > 0 ? 'flex' : 'none';
   document.getElementById('nextBtn').style.display   = answered && !isLast ? 'flex' : 'none';
-  document.getElementById('finishBtn').style.display = 'none';
+  document.getElementById('finishBtn').style.display = answered && isLast ? 'flex' : 'none';
   document.getElementById('navHint').style.display   = !answered ? 'block' : 'none';
 }
 
@@ -577,8 +601,8 @@ function renderSA(s) {
 
   document.getElementById('geminiLoading').style.display = 'none';
 
-  const isLast = currentSaIdx === SA_SCENARIOS.length - 1;
-  document.getElementById('prevBtn').style.display = currentSaIdx > 0 ? 'flex' : 'none';
+  const isLast = currentItemIdx === filteredQuestions.length - 1;
+  document.getElementById('prevBtn').style.display = currentItemIdx > 0 ? 'flex' : 'none';
   document.getElementById('nextBtn').style.display   = existing && !isLast ? 'flex' : 'none';
   document.getElementById('finishBtn').style.display = existing && isLast ? 'flex' : 'none';
   document.getElementById('navHint').style.display   = !existing ? 'block' : 'none';
@@ -602,9 +626,9 @@ function selectMC(optIdx) {
   document.getElementById('feedbackTitle').style.color = isCorrect ? '#34D399' : '#F87171';
   document.getElementById('feedbackText').textContent = isCorrect ? s.feedback : s.incorrectFeedback;
 
-  const isLast = currentMcIdx === MC_SCENARIOS.length - 1;
+  const isLast = currentItemIdx === filteredQuestions.length - 1;
   document.getElementById('nextBtn').style.display   = !isLast ? 'flex' : 'none';
-  document.getElementById('finishBtn').style.display = 'none';
+  document.getElementById('finishBtn').style.display = isLast ? 'flex' : 'none';
   document.getElementById('navHint').style.display   = 'none';
   updateProgress(); renderDots(); updateCategoryBreakdown();
 }
@@ -632,7 +656,7 @@ async function submitShortAnswer() {
     document.getElementById('geminiAssessment').classList.add('visible');
     document.getElementById('saSubmitBtn').textContent = 'Response Submitted';
 
-    const isLast = currentSaIdx === SA_SCENARIOS.length - 1;
+    const isLast = currentItemIdx === filteredQuestions.length - 1;
     document.getElementById('nextBtn').style.display   = !isLast ? 'flex' : 'none';
     document.getElementById('finishBtn').style.display = isLast  ? 'flex' : 'none';
     document.getElementById('navHint').style.display   = 'none';
@@ -664,13 +688,11 @@ function renderGeminiResult(a) {
 }
 
 function nextScenario() {
-  if (currentPhase === 'mc') { if (currentMcIdx < MC_SCENARIOS.length-1) { currentMcIdx++; renderScenario(); } }
-  else { if (currentSaIdx < SA_SCENARIOS.length-1) { currentSaIdx++; renderScenario(); } }
+  if (currentItemIdx < filteredQuestions.length - 1) { currentItemIdx++; renderScenario(); }
 }
 
 function prevScenario() {
-  if (currentPhase === 'mc') { if (currentMcIdx > 0) { currentMcIdx--; renderScenario(); } }
-  else { if (currentSaIdx > 0) { currentSaIdx--; renderScenario(); } }
+  if (currentItemIdx > 0) { currentItemIdx--; renderScenario(); }
 }
 
 function finishAssessment() {
@@ -750,25 +772,28 @@ function resetAssessment() {
 function renderDots() {
   const mcDots = document.getElementById('mcDots');
   mcDots.innerHTML = '';
-  MC_SCENARIOS.forEach((s,i) => {
-    const dot = document.createElement('div');
-    dot.className = 'scenario-dot';
-    dot.textContent = i+1;
-    if (currentPhase==='mc'&&i===currentMcIdx) dot.classList.add('current');
-    else if (mcAnswers[s.id]) dot.classList.add(mcAnswers[s.id].correct?'answered-correct':'answered-wrong');
-    dot.onclick = () => { currentPhase='mc'; currentMcIdx=i; renderScenario(); };
-    mcDots.appendChild(dot);
-  });
   const saDots = document.getElementById('saDots');
   saDots.innerHTML = '';
-  SA_SCENARIOS.forEach((s,i) => {
+
+  filteredQuestions.forEach((s, i) => {
     const dot = document.createElement('div');
     dot.className = 'scenario-dot';
-    dot.textContent = 'S'+(i+1);
-    if (currentPhase==='sa'&&i===currentSaIdx) dot.classList.add('current');
-    else if (saAnswers[s.id]) dot.classList.add('answered-sa');
-    dot.onclick = () => { currentPhase='sa'; currentSaIdx=i; renderScenario(); };
-    saDots.appendChild(dot);
+    const isCurrent = i === currentItemIdx;
+
+    if (s.type === 'mc') {
+      dot.textContent = i + 1;
+      if (isCurrent) dot.classList.add('current');
+      else if (mcAnswers[s.id]) dot.classList.add(mcAnswers[s.id].correct ? 'answered-correct' : 'answered-wrong');
+      dot.onclick = () => { currentItemIdx = i; renderScenario(); };
+      mcDots.appendChild(dot);
+    } else {
+      const saIdx = SA_SCENARIOS.indexOf(s);
+      dot.textContent = 'S' + (saIdx + 1);
+      if (isCurrent) dot.classList.add('current');
+      else if (saAnswers[s.id]) dot.classList.add('answered-sa');
+      dot.onclick = () => { currentItemIdx = i; renderScenario(); };
+      saDots.appendChild(dot);
+    }
   });
 }
 
@@ -821,7 +846,7 @@ function updateCategoryBreakdown() {
       if (!r.data) return;
       const opt = document.createElement('option');
       opt.value = i;
-      const memberNum = 'M'+String(i+1).padStart(4,'0');
+      const memberNum = 'C'+String(i+1).padStart(4,'0');
       opt.textContent = `${memberNum} — ${SOC[r.data.candidate_summary.soc_code]||'Unknown'} (${r.data.candidate_summary.overall_score.toFixed(1)})`;
       sel.appendChild(opt);
     });

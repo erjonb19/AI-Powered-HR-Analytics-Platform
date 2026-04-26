@@ -804,7 +804,7 @@ async def generate_hiring_plan_pdf(request: Request):
     # Styles
     s_brand   = ParagraphStyle("brand",   fontSize=9,  textColor=TEAL,  fontName="Helvetica-Bold", spaceAfter=1)
     s_sub     = ParagraphStyle("sub",     fontSize=8,  textColor=SLATE, spaceAfter=10)
-    s_h1      = ParagraphStyle("h1",      fontSize=20, textColor=NAVY,  fontName="Helvetica-Bold", spaceAfter=4, spaceBefore=4)
+    s_h1      = ParagraphStyle("h1",      fontSize=15, textColor=NAVY,  fontName="Helvetica-Bold", spaceAfter=4, spaceBefore=4)
     s_meta    = ParagraphStyle("meta",    fontSize=9,  textColor=SLATE, spaceAfter=2)
     s_h2      = ParagraphStyle("h2",      fontSize=12, textColor=BLUE,  fontName="Helvetica-Bold", spaceAfter=8, spaceBefore=16, borderPad=0)
     s_h3      = ParagraphStyle("h3",      fontSize=10, textColor=NAVY,  fontName="Helvetica-Bold", spaceAfter=4, spaceBefore=10)

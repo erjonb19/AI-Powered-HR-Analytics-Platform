@@ -490,7 +490,7 @@ function renderList(filter = '') {
 
     if (filter && !role.toLowerCase().includes(filter) && !score.includes(filter)) return;
 
-    const memberNum = 'M' + String(idx + 1).padStart(4, '0');
+    const memberNum = 'C' + String(idx + 1).padStart(4, '0');
     const item = document.createElement('div');
     item.className = 'candidate-item' + (idx === selectedIdx ? ' active' : '');
     item.onclick = () => selectCandidate(idx, item);

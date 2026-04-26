@@ -348,7 +348,7 @@
   <table class="data-table">
     <thead>
       <tr>
-        <th>Member</th>
+        <th>Candidate</th>
         <th>Role</th>
         <th>Age / State</th>
         <th>Composite</th>
@@ -508,7 +508,7 @@ function renderBucketList(listId, candidates, color) {
   list.innerHTML = candidates.map(c => {
     const s = c.data.candidate_summary;
     const tta = calcTTA(c);
-    const memberNum = 'M' + String(candidates.indexOf(c) + 1).padStart(4, '0');
+    const memberNum = 'C' + String(candidates.indexOf(c) + 1).padStart(4, '0');
     return `
       <div class="bucket-item">
         <div class="bucket-item-role">${memberNum} — ${SOC_LABELS[s.soc_code] || s.soc_code}</div>

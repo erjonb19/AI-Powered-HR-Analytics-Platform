@@ -253,6 +253,7 @@
 
 .radar-wrap {
   display: flex; align-items: flex-start; gap: 32px;
+  min-height: 260px;
 }
 
 .radar-chart {
@@ -669,7 +670,7 @@ function renderDetail(c) {
 }
 
 function buildRadarSVG(scores) {
-  const cx = 100, cy = 100, r = 80;
+  const cx = 120, cy = 120, r = 82;
   const n = scores.length;
   const angleStep = (2 * Math.PI) / n;
 
@@ -686,8 +687,8 @@ function buildRadarSVG(scores) {
     const angle = i * angleStep - Math.PI / 2;
     const x2 = cx + r * Math.cos(angle);
     const y2 = cy + r * Math.sin(angle);
-    const lx = cx + (r + 20) * Math.cos(angle);
-    const ly = cy + (r + 20) * Math.sin(angle);
+    const lx = cx + (r + 26) * Math.cos(angle);
+    const ly = cy + (r + 26) * Math.sin(angle);
     axes += `<line x1="${cx}" y1="${cy}" x2="${x2}" y2="${y2}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`;
     labels += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" fill="rgba(148,163,184,0.7)" font-size="9" font-family="DM Mono">${s.label.split(' ')[0]}</text>`;
   });
@@ -713,7 +714,7 @@ function buildRadarSVG(scores) {
   }).join('');
 
   return `
-    <svg class="radar-chart" width="200" height="200" viewBox="0 0 200 200">
+    <svg class="radar-chart" width="240" height="240" viewBox="0 0 240 240">
       ${gridCircles}
       ${axes}
       ${polygon}

@@ -452,6 +452,8 @@ const SOC_LABELS = {
 let allCandidates = [];
 let selectedIdx = null;
 let planVisible = false;
+let storedAiSummary = '';
+let storedOnboardingPlan = '';
 
 // Load from server-side batch store
 async function loadFromServer() {
@@ -745,6 +747,8 @@ async function runAIAnalysis(c) {
     if (!res.ok) throw new Error('Explain API failed');
     const data = await res.json();
 
+    storedAiSummary = data.summary;
+    storedOnboardingPlan = data.onboarding_plan;
     document.getElementById('aiContent').innerHTML = `
       <div class="ai-text">${data.summary}</div>
       <button class="plan-toggle-btn" onclick="togglePlan(this)">
@@ -771,9 +775,9 @@ async function exportPDF() {
     alert('Please select a candidate first.'); return;
   }
   const c = allCandidates[selectedIdx];
-  const memberNum = 'M' + String(selectedIdx + 1).padStart(4, '0');
-  const aiText = document.getElementById('aiContent')?.querySelector('.ai-text')?.textContent || '';
-  const planText = document.getElementById('planContent')?.textContent || '';
+  const memberNum = 'C' + String(selectedIdx + 1).padStart(4, '0');
+  const aiText = storedAiSummary || document.getElementById('aiContent')?.querySelector('.ai-text')?.textContent || '';
+  const planText = storedOnboardingPlan || document.getElementById('planContent')?.textContent || '';
   const btn = document.querySelector('.pdf-btn');
   const origText = btn.textContent;
   btn.textContent = '⏳ Generating PDF...';
@@ -797,7 +801,7 @@ async function exportPDF() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'SorvexHiringPlan_' + memberNum + '.pdf';
+    a.download = 'Sorvex360_HiringPlan_' + memberNum + '.pdf';
     a.click();
     URL.revokeObjectURL(url);
   } catch(e) {

@@ -333,8 +333,8 @@
         <option value="">— Select from batch —</option>
       </select>
       <input class="candidate-input" type="text" id="candidateName" placeholder="Or enter name / ID">
-      <select class="candidate-input" id="candidateRole" style="margin-bottom:0;">
-        <option value="">Select role...</option>
+      <select class="candidate-input" id="candidateRole" style="margin-bottom:0;" title="Role used to contextualize Gemini short answer scoring">
+        <option value="">Role for SA scoring (optional)</option>
         <option value="49-9051.00">Power Line Installer/Repairer</option>
         <option value="49-2022.00">Telecom Equipment Installer</option>
         <option value="51-8013.00">Power Plant Operator</option>
@@ -609,7 +609,7 @@ function renderSA(s) {
 }
 
 function selectMC(optIdx) {
-  const s = MC_SCENARIOS[currentMcIdx];
+  const s = filteredQuestions[currentItemIdx];
   const isCorrect = optIdx === s.correct;
   mcAnswers[s.id] = { selected: optIdx, correct: isCorrect };
 
@@ -634,7 +634,7 @@ function selectMC(optIdx) {
 }
 
 async function submitShortAnswer() {
-  const s = SA_SCENARIOS[currentSaIdx];
+  const s = filteredQuestions[currentItemIdx];
   const response = document.getElementById('saTextarea').value.trim();
   if (!response || response.length < 20) { alert('Please write a more detailed response before submitting.'); return; }
 

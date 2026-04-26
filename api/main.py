@@ -924,8 +924,7 @@ async def generate_hiring_plan_pdf(request: Request):
             "The following plan is tailored to this candidate's specific risk profile and targets their identified development areas.",
             ParagraphStyle("intro", fontSize=9, textColor=SLATE, spaceAfter=8, leading=13)
         ))
-        for line in onboarding.split("
-"):
+        for line in onboarding.split("\n"):
             line = line.strip()
             if not line:
                 story.append(Spacer(1, 3))

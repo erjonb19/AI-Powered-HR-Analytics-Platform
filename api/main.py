@@ -852,7 +852,7 @@ async def generate_hiring_plan_pdf(request: Request):
         tc = tier_color_for(t)
         pred_rows.append([
             label,
-            Paragraph(f"<font color='#{tc.hexval()[1:]}'><b>{t} Risk</b></font>", style_center),
+            Paragraph(f"<b>{t} Risk</b>", style_center),
             f"{p.get('score','—')}/100",
             f"{p.get('probability',0)*100:.1f}%"
         ])

@@ -45,9 +45,9 @@ API_BASE    = os.getenv("API_BASE",    "https://sorvex360-predict-839675931790.u
 
 # ── Users ─────────────────────────────────────────────────────────────────────
 USERS = {
-    "admin":   {"password": "Admin-Sorvex-2026",  "role": "admin",  "client": "All Clients",    "client_key": "admin"},
-    "clienta": {"password": "ClientA-2026",        "role": "viewer", "client": "Utility Corp A", "client_key": "clienta"},
-    "clientb": {"password": "ClientB-2026",        "role": "viewer", "client": "Utility Corp B", "client_key": "clientb"},
+    "admin":   {"password": "Sorvex!Admin2026",  "role": "admin",  "client": "All Clients",    "client_key": "admin"},
+    "clienta": {"password": "Sorvex!ClientA26",  "role": "viewer", "client": "Utility Corp A", "client_key": "clienta"},
+    "clientb": {"password": "Sorvex!ClientB26",  "role": "viewer", "client": "Utility Corp B", "client_key": "clientb"},
 }
 
 # ── In-memory batch store ─────────────────────────────────────────────────────
@@ -747,10 +747,10 @@ async def generate_hiring_plan_pdf(request: Request):
     from reportlab.lib.pagesizes import letter
     from reportlab.lib import colors
     from reportlab.lib.units import inch
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, KeepTogether
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER, TA_LEFT
-    import io
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+    import io, datetime
 
     user = request.session.get("user")
     if not user:
@@ -763,188 +763,230 @@ async def generate_hiring_plan_pdf(request: Request):
     cohort        = body.get("cohort", {})
     ai_summary    = body.get("ai_summary", "")
     onboarding    = body.get("onboarding_plan", "")
-    member_num    = body.get("member_num", "M0001")
+    member_num    = body.get("member_num", "C0001")
 
-    # Colors
-    NAVY    = colors.HexColor("#0D1B2A")
-    BLUE    = colors.HexColor("#2563EB")
-    TEAL    = colors.HexColor("#0D9488")
-    SLATE   = colors.HexColor("#94A3B8")
-    LOW_C   = colors.HexColor("#059669")
-    MED_C   = colors.HexColor("#D97706")
-    HIGH_C  = colors.HexColor("#DC2626")
-    WHITE   = colors.white
-    LGRAY   = colors.HexColor("#F1F5F9")
+    NAVY   = colors.HexColor("#0D1B2A")
+    BLUE   = colors.HexColor("#2563EB")
+    TEAL   = colors.HexColor("#0D9488")
+    SLATE  = colors.HexColor("#64748B")
+    LOW_C  = colors.HexColor("#059669")
+    MED_C  = colors.HexColor("#D97706")
+    HIGH_C = colors.HexColor("#DC2626")
+    LGRAY  = colors.HexColor("#F8FAFC")
+    MGRAY  = colors.HexColor("#E2E8F0")
+    DGRAY  = colors.HexColor("#334155")
 
     SOC_LABELS = {
-        '49-9051.00':'Power Line Installer/Repairer',
-        '49-2022.00':'Telecom Equipment Installer',
-        '51-8013.00':'Power Plant Operator',
-        '51-8031.00':'Water/Wastewater Treatment Op.',
-        '51-8092.00':'Gas Plant Operator',
-        '43-5041.00':'Meter Reader, Utilities',
+        "49-9051.00":"Power Line Installer/Repairer",
+        "49-2022.00":"Telecom Equipment Installer",
+        "51-8013.00":"Power Plant Operator",
+        "51-8031.00":"Water/Wastewater Treatment Op.",
+        "51-8092.00":"Gas Plant Operator",
+        "43-5041.00":"Meter Reader, Utilities",
     }
 
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=letter,
-                            leftMargin=0.75*inch, rightMargin=0.75*inch,
-                            topMargin=0.75*inch, bottomMargin=0.75*inch)
-
-    styles = getSampleStyleSheet()
-    style_h1 = ParagraphStyle('h1', fontSize=22, textColor=NAVY, spaceAfter=4, fontName='Helvetica-Bold')
-    style_h2 = ParagraphStyle('h2', fontSize=13, textColor=BLUE, spaceAfter=6, fontName='Helvetica-Bold', spaceBefore=14)
-    style_h3 = ParagraphStyle('h3', fontSize=11, textColor=NAVY, spaceAfter=4, fontName='Helvetica-Bold')
-    style_body = ParagraphStyle('body', fontSize=10, textColor=colors.HexColor("#334155"), leading=15, spaceAfter=6)
-    style_small = ParagraphStyle('small', fontSize=8, textColor=SLATE, leading=12)
-    style_center = ParagraphStyle('center', fontSize=10, alignment=TA_CENTER, textColor=colors.HexColor("#334155"))
-    style_tier = ParagraphStyle('tier', fontSize=11, fontName='Helvetica-Bold', alignment=TA_CENTER)
+    def tier_color(t):
+        if "Low" in str(t): return LOW_C
+        if "Medium" in str(t): return MED_C
+        return HIGH_C
 
     soc_code   = summary.get("soc_code", "")
     role_label = SOC_LABELS.get(soc_code, soc_code)
     overall    = summary.get("overall_score", 0)
     tier       = summary.get("overall_tier", "—")
-    tier_color = LOW_C if "Low" in tier else MED_C if "Medium" in tier else HIGH_C
+    tc         = tier_color(tier)
 
-    def tier_color_for(t):
-        return LOW_C if t == "Low" else MED_C if t == "Medium" else HIGH_C
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=letter,
+        leftMargin=0.8*inch, rightMargin=0.8*inch,
+        topMargin=0.75*inch, bottomMargin=0.75*inch)
+
+    # Styles
+    s_brand   = ParagraphStyle("brand",   fontSize=9,  textColor=TEAL,  fontName="Helvetica-Bold", spaceAfter=1)
+    s_sub     = ParagraphStyle("sub",     fontSize=8,  textColor=SLATE, spaceAfter=10)
+    s_h1      = ParagraphStyle("h1",      fontSize=20, textColor=NAVY,  fontName="Helvetica-Bold", spaceAfter=4, spaceBefore=4)
+    s_meta    = ParagraphStyle("meta",    fontSize=9,  textColor=SLATE, spaceAfter=2)
+    s_h2      = ParagraphStyle("h2",      fontSize=12, textColor=BLUE,  fontName="Helvetica-Bold", spaceAfter=8, spaceBefore=16, borderPad=0)
+    s_h3      = ParagraphStyle("h3",      fontSize=10, textColor=NAVY,  fontName="Helvetica-Bold", spaceAfter=4, spaceBefore=10)
+    s_body    = ParagraphStyle("body",    fontSize=9,  textColor=DGRAY, leading=14, spaceAfter=5)
+    s_bullet  = ParagraphStyle("bullet",  fontSize=9,  textColor=DGRAY, leading=14, spaceAfter=3, leftIndent=14, firstLineIndent=0)
+    s_small   = ParagraphStyle("small",   fontSize=8,  textColor=SLATE, leading=12, spaceAfter=3)
+    s_center  = ParagraphStyle("center",  fontSize=9,  textColor=DGRAY, alignment=TA_CENTER)
+    s_score   = ParagraphStyle("score",   fontSize=38, fontName="Helvetica-Bold", textColor=tc, alignment=TA_CENTER, leading=42)
+    s_tier    = ParagraphStyle("tier",    fontSize=13, fontName="Helvetica-Bold", textColor=tc, alignment=TA_CENTER, spaceAfter=2)
+    s_footer  = ParagraphStyle("footer",  fontSize=7,  textColor=SLATE, alignment=TA_CENTER)
 
     story = []
 
     # ── Header ──
-    story.append(Paragraph("SORVEX 360™", ParagraphStyle('brand', fontSize=10, textColor=TEAL, fontName='Helvetica-Bold', spaceAfter=2)))
-    story.append(Paragraph("Workforce Risk Intelligence — Hiring Plan", ParagraphStyle('sub', fontSize=8, textColor=SLATE, spaceAfter=8)))
-    story.append(HRFlowable(width="100%", thickness=2, color=BLUE, spaceAfter=12))
-    story.append(Paragraph(f"Candidate Hiring Plan — {member_num}", style_h1))
-    story.append(Paragraph(f"{role_label} · {candidate.get('State','—')} · Age {candidate.get('Age','—')}", style_body))
-    story.append(Paragraph(f"Generated: {__import__('datetime').datetime.now().strftime('%B %d, %Y')} · Client: {user.get('client','—')}", style_small))
-    story.append(Spacer(1, 12))
+    story.append(Paragraph("SORVEX 360™", s_brand))
+    story.append(Paragraph("Workforce Risk Intelligence — Candidate Hiring Plan", s_sub))
+    story.append(HRFlowable(width="100%", thickness=2, color=BLUE, spaceAfter=10))
+    story.append(Paragraph(f"Candidate Hiring Plan — {member_num}", s_h1))
+    story.append(Paragraph(f"{role_label} · {candidate.get('State','')}, Age {candidate.get('Age','')}", s_meta))
+    story.append(Paragraph(f"Generated: {datetime.datetime.now().strftime('%B %d, %Y')} · Client: {user.get('client','')}", s_small))
+    story.append(Spacer(1, 6))
 
-    # ── Composite Score ──
-    story.append(Paragraph("Overall Composite Score", style_h2))
-    score_data = [
-        [Paragraph(f"{overall:.1f}", ParagraphStyle('score', fontSize=36, fontName='Helvetica-Bold', textColor=tier_color, alignment=TA_CENTER)),
-         Paragraph(f"{tier}<br/><font size=9 color='grey'>Cohort: {cohort.get('percentile','—')}th percentile</font>", style_tier)],
-    ]
-    score_table = Table(score_data, colWidths=[2*inch, 4*inch])
-    score_table.setStyle(TableStyle([
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('BACKGROUND', (0,0), (0,0), LGRAY),
-        ('ROUNDEDCORNERS', [8]),
-        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor("#E2E8F0")),
-        ('ROWBACKGROUNDS', (0,0), (-1,-1), [LGRAY, WHITE]),
-        ('TOPPADDING', (0,0), (-1,-1), 12),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 12),
+    # ── Score + Tier ──
+    story.append(Paragraph("Overall Composite Score", s_h2))
+    score_data = [[
+        Paragraph(f"{overall:.1f}", s_score),
+        [
+            Paragraph(tier, s_tier),
+            Paragraph(f"Cohort: {cohort.get('percentile','—')}th percentile", ParagraphStyle("cp", fontSize=9, textColor=SLATE, alignment=TA_CENTER)),
+            Spacer(1, 4),
+            Paragraph(cohort.get('description',''), ParagraphStyle("cd", fontSize=8, textColor=SLATE, alignment=TA_CENTER, leading=11)),
+        ]
+    ]]
+    score_t = Table(score_data, colWidths=[1.8*inch, 4.9*inch])
+    score_t.setStyle(TableStyle([
+        ("ALIGN",      (0,0), (-1,-1), "CENTER"),
+        ("VALIGN",     (0,0), (-1,-1), "MIDDLE"),
+        ("BACKGROUND", (0,0), (0,0),   LGRAY),
+        ("BACKGROUND", (1,0), (1,0),   colors.white),
+        ("BOX",        (0,0), (-1,-1), 0.5, MGRAY),
+        ("LINEAFTER",  (0,0), (0,-1),  0.5, MGRAY),
+        ("TOPPADDING", (0,0), (-1,-1), 12),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 12),
+        ("LEFTPADDING",   (0,0), (-1,-1), 10),
+        ("RIGHTPADDING",  (0,0), (-1,-1), 10),
     ]))
-    story.append(score_table)
-    story.append(Spacer(1, 8))
-    if cohort.get('description'):
-        story.append(Paragraph(f"📊 {cohort['description']}", style_small))
-    story.append(Spacer(1, 8))
+    story.append(score_t)
+    story.append(Spacer(1, 6))
 
-    # ── Predictions ──
-    story.append(Paragraph("Risk Predictions", style_h2))
-    pred_rows = [["Outcome", "Risk Tier", "Score", "Probability"]]
-    pred_map = [("retention","📋 Retention (1-Year)"), ("safety","⚠ Safety Risk"), ("promotion","📈 Promotion (24mo)")]
+    # ── Risk Predictions ──
+    story.append(Paragraph("Risk Predictions", s_h2))
+    pred_rows = [[
+        Paragraph("Outcome", ParagraphStyle("th", fontSize=9, textColor=colors.white, fontName="Helvetica-Bold")),
+        Paragraph("Risk Tier", ParagraphStyle("th", fontSize=9, textColor=colors.white, fontName="Helvetica-Bold", alignment=TA_CENTER)),
+        Paragraph("Score", ParagraphStyle("th", fontSize=9, textColor=colors.white, fontName="Helvetica-Bold", alignment=TA_CENTER)),
+        Paragraph("Probability", ParagraphStyle("th", fontSize=9, textColor=colors.white, fontName="Helvetica-Bold", alignment=TA_CENTER)),
+    ]]
+    pred_map = [("retention","Retention (1-Year)"),("safety","Safety Risk"),("promotion","Promotion (24mo)")]
     for key, label in pred_map:
-        p = predictions.get(key, {})
-        t = p.get("risk_tier","—")
-        tc = tier_color_for(t)
+        p  = predictions.get(key, {})
+        t  = p.get("risk_tier", "—")
+        pc = tier_color(t)
         pred_rows.append([
-            label,
-            Paragraph(f"<b>{t} Risk</b>", style_center),
-            f"{p.get('score','—')}/100",
-            f"{p.get('probability',0)*100:.1f}%"
+            Paragraph(label, s_body),
+            Paragraph(f"<b>{t} Risk</b>", ParagraphStyle("tc", fontSize=9, fontName="Helvetica-Bold", alignment=TA_CENTER, textColor=pc)),
+            Paragraph(f"{p.get('score','—')}/100", s_center),
+            Paragraph(f"{p.get('probability',0)*100:.1f}%", s_center),
         ])
-
-    pred_table = Table(pred_rows, colWidths=[2.5*inch, 1.5*inch, 1*inch, 1.2*inch])
-    pred_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), NAVY),
-        ('TEXTCOLOR', (0,0), (-1,0), WHITE),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,0), 9),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('ALIGN', (0,0), (0,-1), 'LEFT'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('ROWBACKGROUNDS', (0,1), (-1,-1), [LGRAY, WHITE]),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#E2E8F0")),
-        ('TOPPADDING', (0,0), (-1,-1), 8),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
-        ('LEFTPADDING', (0,0), (-1,-1), 10),
+    pred_t = Table(pred_rows, colWidths=[2.5*inch, 1.6*inch, 1.1*inch, 1.5*inch])
+    pred_t.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0), (-1,0),  NAVY),
+        ("ROWBACKGROUNDS",(0,1), (-1,-1), [LGRAY, colors.white]),
+        ("GRID",          (0,0), (-1,-1), 0.5, MGRAY),
+        ("ALIGN",         (0,0), (-1,-1), "CENTER"),
+        ("ALIGN",         (0,0), (0,-1),  "LEFT"),
+        ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+        ("TOPPADDING",    (0,0), (-1,-1), 7),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 7),
+        ("LEFTPADDING",   (0,0), (-1,-1), 10),
     ]))
-    story.append(pred_table)
-    story.append(Spacer(1, 8))
+    story.append(pred_t)
 
     # ── Candidate Profile ──
-    story.append(Paragraph("Candidate Profile", style_h2))
+    story.append(Paragraph("Candidate Profile", s_h2))
+    def lbl(txt): return Paragraph(txt, ParagraphStyle("lbl", fontSize=8, textColor=SLATE, fontName="Helvetica-Bold"))
+    def val(txt): return Paragraph(str(txt), s_body)
     profile_data = [
-        ["Role", role_label, "Education", candidate.get("EducationLevel","—")],
-        ["Age", str(candidate.get("Age","—")), "State", candidate.get("State","—")],
-        ["Attendance", f"{candidate.get('AttendanceRate',0)*100:.0f}%", "Safety Commitment", f"{candidate.get('SafetyCommitmentScore',0):.1f}/5"],
-        ["Training Hours", f"{candidate.get('TotalTrainingHours',0):,}", "Certifications", str(candidate.get("CertificationsEarned","—"))],
-        ["Prior Experience", "Yes" if candidate.get("HasPriorTradeExperience") else "No", "Veteran", "Yes" if candidate.get("VeteranStatus") else "No"],
-        ["PI Score", f"{candidate.get('Sorvex360PI_Score',0):.1f}", "Job Tenure", f"{candidate.get('LongestJobTenure',0):.1f} yrs"],
+        [lbl("Role"),            val(role_label),                           lbl("Education"),    val(candidate.get("EducationLevel","—"))],
+        [lbl("Age"),             val(candidate.get("Age","—")),             lbl("State"),        val(candidate.get("State","—"))],
+        [lbl("Attendance"),      val(f"{candidate.get('AttendanceRate',0)*100:.0f}%"), lbl("Safety Commit"), val(f"{candidate.get('SafetyCommitmentScore',0):.1f}/5")],
+        [lbl("Training Hours"),  val(f"{candidate.get('TotalTrainingHours',0):,}"),    lbl("Certifications"), val(candidate.get("CertificationsEarned","—"))],
+        [lbl("Prior Exp"),       val("Yes" if candidate.get("HasPriorTradeExperience") else "No"), lbl("Veteran"), val("Yes" if candidate.get("VeteranStatus") else "No")],
+        [lbl("PI Score"),        val(f"{candidate.get('Sorvex360PI_Score',0):.1f}"),   lbl("Job Tenure"),    val(f"{candidate.get('LongestJobTenure',0):.1f} yrs")],
     ]
-    profile_table = Table(profile_data, colWidths=[1.5*inch, 2*inch, 1.5*inch, 2*inch])
-    profile_table.setStyle(TableStyle([
-        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
-        ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,-1), 9),
-        ('TEXTCOLOR', (0,0), (0,-1), SLATE),
-        ('TEXTCOLOR', (2,0), (2,-1), SLATE),
-        ('ROWBACKGROUNDS', (0,0), (-1,-1), [LGRAY, WHITE]),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#E2E8F0")),
-        ('TOPPADDING', (0,0), (-1,-1), 7),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 7),
-        ('LEFTPADDING', (0,0), (-1,-1), 10),
+    prof_t = Table(profile_data, colWidths=[1.3*inch, 2.0*inch, 1.3*inch, 2.1*inch])
+    prof_t.setStyle(TableStyle([
+        ("ROWBACKGROUNDS", (0,0), (-1,-1), [LGRAY, colors.white]),
+        ("GRID",           (0,0), (-1,-1), 0.5, MGRAY),
+        ("TOPPADDING",     (0,0), (-1,-1), 6),
+        ("BOTTOMPADDING",  (0,0), (-1,-1), 6),
+        ("LEFTPADDING",    (0,0), (-1,-1), 8),
+        ("VALIGN",         (0,0), (-1,-1), "MIDDLE"),
     ]))
-    story.append(profile_table)
-    story.append(Spacer(1, 8))
+    story.append(prof_t)
 
-    # ── AI Summary ──
+    # ── AI Analyst Summary ──
     if ai_summary:
-        story.append(Paragraph("AI Analyst Summary", style_h2))
-        story.append(Paragraph("✦ Gemini 2.5 Flash", ParagraphStyle('gem', fontSize=8, textColor=TEAL, spaceAfter=6)))
-        story.append(Paragraph(ai_summary, style_body))
-        story.append(Spacer(1, 8))
+        story.append(Paragraph("AI Analyst Summary", s_h2))
+        story.append(Paragraph("✦ Powered by Gemini 2.5 Flash", ParagraphStyle("gem", fontSize=8, textColor=TEAL, spaceAfter=6)))
+        story.append(Paragraph(ai_summary, s_body))
 
-    # ── Onboarding Plan ──
+    # ── 90-Day Onboarding Plan ──
     if onboarding:
-        story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#E2E8F0"), spaceAfter=8))
-        story.append(Paragraph("90-Day Onboarding Plan", style_h2))
-        for line in onboarding.split('\n'):
+        story.append(HRFlowable(width="100%", thickness=0.5, color=MGRAY, spaceAfter=4, spaceBefore=12))
+        story.append(Paragraph("90-Day Onboarding Plan", s_h2))
+        story.append(Paragraph(
+            "The following plan is tailored to this candidate's specific risk profile and targets their identified development areas.",
+            ParagraphStyle("intro", fontSize=9, textColor=SLATE, spaceAfter=8, leading=13)
+        ))
+        for line in onboarding.split("
+"):
             line = line.strip()
-            if not line: story.append(Spacer(1, 4)); continue
-            if line.startswith('###') or line.startswith('**Days'):
-                clean = line.replace('###','').replace('**','').strip()
-                story.append(Paragraph(clean, style_h3))
-            elif line.startswith('*') or line.startswith('-'):
-                clean = line.lstrip('*- ').replace('**','')
-                story.append(Paragraph(f"• {clean}", ParagraphStyle('bullet', fontSize=9, leftIndent=12, textColor=colors.HexColor("#334155"), leading=14, spaceAfter=4)))
-            elif line.startswith('---'):
+            if not line:
+                story.append(Spacer(1, 3))
+                continue
+            # Section headers
+            if line.startswith("###") or (line.startswith("**Days") and ":**" in line) or (line.startswith("**Days") and line.endswith("**")):
+                clean = line.replace("###","").replace("**","").strip().rstrip(":")
+                story.append(Paragraph(clean, s_h3))
+            # Bold inline items
+            elif line.startswith("**") and ":**" in line:
+                clean = line.replace("**","").strip()
+                story.append(Paragraph(f"• {clean}", s_bullet))
+            # Bullet points
+            elif line.startswith(("*","-","•")):
+                clean = line.lstrip("*-• ").replace("**","").strip()
+                if clean:
+                    story.append(Paragraph(f"• {clean}", s_bullet))
+            # Numbered items
+            elif len(line) > 2 and line[0].isdigit() and line[1] in ".)":
+                clean = line[2:].replace("**","").strip()
+                story.append(Paragraph(f"{line[0]}. {clean}", s_bullet))
+            elif line == "---":
                 story.append(Spacer(1, 4))
             else:
-                clean = line.replace('**','')
-                story.append(Paragraph(clean, style_body))
+                clean = line.replace("**","").strip()
+                if clean:
+                    story.append(Paragraph(clean, s_body))
+
+    # ── Recommendation Box ──
+    story.append(Spacer(1, 10))
+    tier_rec = "Proceed to offer" if "Low" in tier else "Conditional offer with structured onboarding" if "Medium" in tier else "Hold — review risk factors before proceeding"
+    rec_data = [[
+        Paragraph("★ Hiring Recommendation", ParagraphStyle("rh", fontSize=10, fontName="Helvetica-Bold", textColor=NAVY)),
+        Paragraph(tier_rec, ParagraphStyle("rv", fontSize=10, fontName="Helvetica-Bold", textColor=tc, alignment=TA_RIGHT)),
+    ]]
+    rec_t = Table(rec_data, colWidths=[3.5*inch, 3.2*inch])
+    rec_t.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0), (-1,-1), LGRAY),
+        ("BOX",           (0,0), (-1,-1), 1, BLUE),
+        ("TOPPADDING",    (0,0), (-1,-1), 10),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 10),
+        ("LEFTPADDING",   (0,0), (-1,-1), 12),
+        ("RIGHTPADDING",  (0,0), (-1,-1), 12),
+        ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+    ]))
+    story.append(rec_t)
 
     # ── Footer ──
-    story.append(Spacer(1, 16))
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#E2E8F0"), spaceAfter=6))
+    story.append(Spacer(1, 14))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=MGRAY, spaceAfter=5))
     story.append(Paragraph(
-        f"Sorvex 360™ · Purdue AI/ML Capstone · Spring 2026 · Project L · Confidential",
-        ParagraphStyle('footer', fontSize=7, textColor=SLATE, alignment=TA_CENTER)
+        f"Sorvex 360™ · Purdue AI/ML Capstone · Spring 2026 · Project L · Confidential · {member_num}",
+        s_footer
     ))
 
     doc.build(story)
     buf.seek(0)
 
-    filename = f"SorvexHiringPlan_{member_num}.pdf"
-    return StreamingResponse(
-        buf,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
-
+    filename = f"Sorvex360_HiringPlan_{member_num}.pdf"
+    return StreamingResponse(buf, media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 @app.post("/compare")
 def compare(req: CompareRequest):
